@@ -1,0 +1,35 @@
+<div class="max-w-full">
+  @for (message of messages(); track message) {
+    <div class="p-2 bg-dark-8 my-3 text-white">
+      <div class="gap-2 max-h-min">
+        <div class="inline-flex items-center flex-shrink-0 gap-2">
+          <span class="text-sm text-dark-0">{{
+            message.createdAt | date: "hh:mm:ss"
+          }}</span>
+
+          <div class="flex gap-1">
+            @for (badge of message.badges; track badge.id) {
+              <img
+                [ngSrc]="badge.url.medium"
+                [alt]="badge.title"
+                height="24"
+                width="24"
+              />
+            }
+          </div>
+
+          <span>
+            <span [style]="{ color: message.color }" class="font-semibold">{{
+              message.displayName
+            }}</span
+            >: &nbsp;
+          </span>
+        </div>
+        <span
+          [innerHtml]="message.message | emotes: message.emotes"
+          class="break-all"
+        ></span>
+      </div>
+    </div>
+  }
+</div>
