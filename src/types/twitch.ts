@@ -8,6 +8,7 @@ export interface TwitchMessage {
   message: string;
   badges: TwitchBadge[];
   emotes: Map<string, TwitchEmote>;
+  prefixUrl: string | null;
 }
 
 export interface TwitchBadge {
@@ -42,4 +43,11 @@ export interface TwitchEmote {
       height: number;
     };
   };
+}
+
+export interface TwitchUser {
+  id: number;
+  login: string;
+  displayName: string;
+  imageUrl: string;
 }

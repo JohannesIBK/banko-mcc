@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { TwitchBadgeResponse, TwitchUsersResponse } from '../../types/response';
 import { environment } from '../../environments/environment';
 import { lastValueFrom } from 'rxjs';
-import { TwitchBadge } from '../../types/twitch';
+import { TwitchBadge, TwitchUser } from '../../types/twitch';
 
 @Injectable({
   providedIn: 'root',
@@ -11,7 +11,7 @@ import { TwitchBadge } from '../../types/twitch';
 export class TwitchApiService {
   constructor(private readonly http: HttpClient) {}
 
-  async getChannelId(channel: string): Promise<number> {
+  async getChannelInfo(channel: string): Promise<TwitchUser> {
     const obs = this.http.get<TwitchUsersResponse>(
       `https://api.twitch.tv/helix/users?login=${channel}`,
       {
@@ -24,7 +24,14 @@ export class TwitchApiService {
 
     const data = await lastValueFrom(obs);
 
-    return Number.parseInt(data.data![0].id);
+    const user = data.data![0];
+
+    return {
+      id: Number.parseInt(user.id),
+      displayName: user.display_name,
+      imageUrl: user.profile_image_url,
+      login: user.login,
+    };
   }
 
   async loadChannelBadges(channelId: number) {

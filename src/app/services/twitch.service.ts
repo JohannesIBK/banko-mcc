@@ -11,6 +11,7 @@ type TwitchBadgeSet = Map<string, TwitchBadge>;
   providedIn: 'root',
 })
 export class TwitchService {
+  private channelImages: Map<string, string> = new Map();
   private globalBadges: Map<string, TwitchBadgeSet> = new Map();
   private channelBadges: Map<string, Map<string, TwitchBadgeSet>> = new Map();
 
@@ -31,7 +32,7 @@ export class TwitchService {
       this.ws.send(`CAP REQ :twitch.tv/tags twitch.tv/commands`);
       this.ws.send(`PASS oauth:${environment.pass}`);
       this.ws.send('NICK johannesibk');
-      this.ws.send('JOIN #johannesibk');
+      this.ws.send('JOIN #noway4u_sir,#papaplatte,#ibai');
     };
 
     this.ws.onmessage = (event) => {
@@ -57,8 +58,6 @@ export class TwitchService {
 
       if (messageType === 'PRIVMSG') {
         this.parseChatMessage(message, channel);
-      } else {
-        console.log(messageType);
       }
     }
     if (message.startsWith(':')) {
@@ -72,13 +71,15 @@ export class TwitchService {
   }
 
   private onChannelJoin(channel: string) {
-    this.twitchApi.getChannelId(channel).then((channelId) => {
-      this.twitchApi.loadChannelBadges(channelId).then((badges) => {
+    this.twitchApi.getChannelInfo(channel).then((user) => {
+      this.channelImages.set(user.login, user.imageUrl);
+
+      this.twitchApi.loadChannelBadges(user.id).then((badges) => {
         this.channelBadges.set(channel, badges);
       });
 
       this.emoteService
-        .loadChannelEmotes(channelId, channel)
+        .loadChannelEmotes(user.id, channel)
         .then(() => console.log('loaded emotes'));
     });
   }
@@ -105,19 +106,19 @@ export class TwitchService {
       .split(',');
     const userMessage = message.split(`PRIVMSG ${channel} :`)[1].trim();
 
+    const broadcasterLogin = channel.replace('#', '');
+
     this.messages$.next({
       id: messageId,
       color,
       displayName: username,
-      emotes: this.emoteService.getMessageEmotes(
-        userMessage,
-        channel.replace('#', ''),
-      ),
+      emotes: this.emoteService.getMessageEmotes(userMessage, broadcasterLogin),
       userId: userId,
       roomId: roomId,
       createdAt: new Date(messageSent),
       message: userMessage,
       badges: this.getBadges(badgesId, channel),
+      prefixUrl: this.channelImages.get(broadcasterLogin) ?? null,
     });
   }
 

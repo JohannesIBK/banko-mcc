@@ -21,16 +21,14 @@ export class SevenTvService {
 
     for (const emote of data.emote_set.emotes) {
       const lrg = emote.data.host.files.find(
-        (file) => file.height === 128 && file.format === 'WEBP',
+        (file) => file.name === '4x.webp',
       )!;
       const med = emote.data.host.files.find(
-        (file) => file.height === 64 && file.format === 'WEBP',
+        (file) => file.name === '2x.webp',
       )!;
       const sml = emote.data.host.files.find(
-        (file) => file.height === 32 && file.format === 'WEBP',
+        (file) => file.name === '1x.webp',
       )!;
-
-      console.log(emote.data.host.files);
 
       emotes.set(emote.name, {
         id: emote.id,

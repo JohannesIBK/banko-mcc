@@ -47,7 +47,10 @@ export class EmotesService {
     channel: string,
     emoteSet: Map<string, TwitchEmote>,
   ) {
-    const channelEmotes = this.sevenTvChannelEmotes.get(channel)!;
+    const channelEmotes = this.sevenTvChannelEmotes.get(channel);
+    if (!channelEmotes) {
+      return;
+    }
 
     for (const part of message) {
       if (channelEmotes.has(part)) {
