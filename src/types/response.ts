@@ -28,6 +28,21 @@ export interface TwitchUsersResponse {
   }[];
 }
 
+export interface TwitchEmoteResponse {
+  data: {
+    id: string;
+    name: string;
+    images: {
+      url_1x: string;
+      url_2x: string;
+      url_4x: string;
+    };
+    format: string[];
+    scale: string[];
+  }[];
+  template: string;
+}
+
 export interface SevenTvEmoteResponse {
   emote_set: {
     emotes: {

@@ -22,8 +22,11 @@ export class TwitchService {
     private readonly twitchApi: TwitchApiService,
     private readonly emoteService: EmotesService,
   ) {
-    twitchApi.loadGlobalBadges().then((badges) => {
+    twitchApi.getGlobalBadges().then((badges) => {
       this.globalBadges = badges;
+    });
+    emoteService.loadGlobalEmotes().then(() => {
+      console.log('loaded global emotes');
     });
 
     this.ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
@@ -32,7 +35,7 @@ export class TwitchService {
       this.ws.send(`CAP REQ :twitch.tv/tags twitch.tv/commands`);
       this.ws.send(`PASS oauth:${environment.pass}`);
       this.ws.send('NICK johannesibk');
-      this.ws.send('JOIN #caedrel,#agurin,#drututt');
+      this.ws.send('JOIN #derbanko,#johannesibk');
     };
 
     this.ws.onmessage = (event) => {
@@ -52,6 +55,8 @@ export class TwitchService {
   }
 
   private parseMassage(message: string) {
+    console.log(message);
+
     if (message.startsWith('@')) {
       const messageType = message.split(' ')[2];
       const channel = message.split(' ')[3];
@@ -74,7 +79,7 @@ export class TwitchService {
     this.twitchApi.getChannelInfo(channel).then((user) => {
       this.channelImages.set(user.login, user.imageUrl);
 
-      this.twitchApi.loadChannelBadges(user.id).then((badges) => {
+      this.twitchApi.getChannelBadges(user.id).then((badges) => {
         this.channelBadges.set(channel, badges);
       });
 
@@ -104,15 +109,27 @@ export class TwitchService {
       .find((tag) => tag.startsWith('badges='))!
       .split('=')[1]
       .split(',');
+    let emotes = tags
+      .find((tag) => tag.startsWith('emotes='))!
+      .split('=')[1]
+      .split('/');
     const userMessage = message.split(`PRIVMSG ${channel} :`)[1].trim();
 
     const broadcasterLogin = channel.replace('#', '');
+
+    if (emotes.at(0) === '') {
+      emotes = [];
+    }
 
     this.messages$.next({
       id: messageId,
       color,
       displayName: username,
-      emotes: this.emoteService.getMessageEmotes(userMessage, broadcasterLogin),
+      emotes: this.emoteService.getMessageEmotes(
+        userMessage,
+        broadcasterLogin,
+        emotes,
+      ),
       userId: userId,
       roomId: roomId,
       createdAt: new Date(messageSent),

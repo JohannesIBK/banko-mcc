@@ -1,9 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { TwitchBadgeResponse, TwitchUsersResponse } from '../../types/response';
+import {
+  TwitchBadgeResponse,
+  TwitchEmoteResponse,
+  TwitchUsersResponse,
+} from '../../types/response';
 import { environment } from '../../environments/environment';
 import { lastValueFrom } from 'rxjs';
-import { TwitchBadge, TwitchUser } from '../../types/twitch';
+import { TwitchBadge, TwitchEmote, TwitchUser } from '../../types/twitch';
 
 @Injectable({
   providedIn: 'root',
@@ -34,7 +38,7 @@ export class TwitchApiService {
     };
   }
 
-  async loadChannelBadges(channelId: number) {
+  async getChannelBadges(channelId: number) {
     const observable = this.http.get<TwitchBadgeResponse>(
       `https://api.twitch.tv/helix/chat/badges?broadcaster_id=${channelId}`,
       {
@@ -50,8 +54,8 @@ export class TwitchApiService {
     return this.responseToMap(data);
   }
 
-  async loadGlobalBadges() {
-    const obserable = this.http.get<TwitchBadgeResponse>(
+  async getGlobalBadges() {
+    const observable = this.http.get<TwitchBadgeResponse>(
       `https://api.twitch.tv/helix/chat/badges/global`,
       {
         headers: {
@@ -61,9 +65,87 @@ export class TwitchApiService {
       },
     );
 
-    const data = await lastValueFrom(obserable);
+    const data = await lastValueFrom(observable);
 
     return this.responseToMap(data);
+  }
+
+  async getGlobalEmotes(): Promise<Map<string, TwitchEmote>> {
+    const observable = this.http.get<TwitchEmoteResponse>(
+      `https://api.twitch.tv/helix/chat/emotes/global`,
+      {
+        headers: {
+          Authorization: `Bearer ${environment.pass}`,
+          'Client-Id': environment.clientId,
+        },
+      },
+    );
+
+    const data = await lastValueFrom(observable);
+
+    const emotes = new Map<string, TwitchEmote>();
+
+    for (const emote of data.data) {
+      emotes.set(emote.name, {
+        id: emote.id,
+        name: emote.name,
+        url: {
+          large: {
+            url: emote.images.url_4x,
+            height: 112,
+            width: 112,
+          },
+          medium: {
+            url: emote.images.url_2x,
+            height: 56,
+            width: 56,
+          },
+          small: {
+            url: emote.images.url_1x,
+            height: 28,
+            width: 28,
+          },
+        },
+      });
+    }
+
+    return emotes;
+  }
+
+  async getChannelEmotes(channelId: number): Promise<TwitchEmote[]> {
+    const observable = this.http.get<TwitchEmoteResponse>(
+      `https://api.twitch.tv/helix/chat/emotes?broadcaster_id=${channelId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${environment.pass}`,
+          'Client-Id': environment.clientId,
+        },
+      },
+    );
+
+    const data = await lastValueFrom(observable);
+
+    return data.data.map((emote) => ({
+      id: emote.id,
+      name: emote.name,
+      url: {
+        large: {
+          url: emote.images.url_4x,
+          height: 112,
+          width: 112,
+        },
+        medium: {
+          url: emote.images.url_2x,
+          height: 56,
+          width: 56,
+        },
+        small: {
+          url: emote.images.url_1x,
+          height: 28,
+          width: 28,
+        },
+      },
+    }));
   }
 
   private responseToMap(response: TwitchBadgeResponse) {
