@@ -7,11 +7,11 @@
       <div class="inline-block align-baseline">
         @if (message.prefixUrl) {
           <img
-            class="inline pr-1 align-baseline relative top-1"
+            class="inline pr-1 align-middle relative -top-[1px]"
             [ngSrc]="message.prefixUrl"
             alt="streamer"
-            height="24"
-            width="24"
+            height="36"
+            width="36"
           />
         }
 
@@ -42,7 +42,7 @@
       <span
         style="margin-top: 1px"
         [innerHtml]="message.message | emotes: message.emotes"
-        class="break-all"
+        class="break-words"
       ></span>
     </div>
   }
