@@ -6,15 +6,13 @@
     <div class="p-2 bg-dark-8 my-3 text-white relative">
       <div class="inline-block align-baseline">
         @if (message.prefixUrl) {
-          <span>
-            <img
-              class="inline pr-1 align-baseline relative top-1"
-              [ngSrc]="message.prefixUrl"
-              alt="streamer"
-              height="24"
-              width="24"
-            />
-          </span>
+          <img
+            class="inline pr-1 align-baseline relative top-1"
+            [ngSrc]="message.prefixUrl"
+            alt="streamer"
+            height="24"
+            width="24"
+          />
         }
 
         <span class="text-sm text-dark-0 mr-1">{{
