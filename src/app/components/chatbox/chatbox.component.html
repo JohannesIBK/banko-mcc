@@ -1,11 +1,14 @@
-<div class="max-w-full">
-  @for (message of messages(); track message) {
+<div
+  class="flex flex-col max-w-full bg-dark-5 overflow-y-scroll max-h-full"
+  id="message-container"
+>
+  @for (message of messages(); track message.id) {
     <div class="p-2 bg-dark-8 my-3 text-white relative">
       <div class="inline-block align-baseline">
         @if (message.prefixUrl) {
           <span>
             <img
-              class="inline pr-1 align-baseline"
+              class="inline pr-1 align-baseline relative top-1"
               [ngSrc]="message.prefixUrl"
               alt="streamer"
               height="24"

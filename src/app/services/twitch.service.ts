@@ -32,7 +32,7 @@ export class TwitchService {
       this.ws.send(`CAP REQ :twitch.tv/tags twitch.tv/commands`);
       this.ws.send(`PASS oauth:${environment.pass}`);
       this.ws.send('NICK johannesibk');
-      this.ws.send('JOIN #noway4u_sir,#papaplatte,#ibai');
+      this.ws.send('JOIN #caedrel,#agurin,#drututt');
     };
 
     this.ws.onmessage = (event) => {
