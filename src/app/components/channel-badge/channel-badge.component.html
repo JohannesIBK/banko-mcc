@@ -1,0 +1,12 @@
+<div class="flex items-center gap-2 rounded bg-dark-5 text-gray-200 p-1">
+  <img
+    [ngSrc]="getProviderIconUrl()"
+    [alt]="channel.variant"
+    height="24"
+    width="24"
+  />
+
+  <span>{{ channel.name }}</span>
+
+  <i-tabler name="x" role="button" (click)="removeChannel()" />
+</div>

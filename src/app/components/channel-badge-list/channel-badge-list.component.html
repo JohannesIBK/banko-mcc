@@ -1,0 +1,5 @@
+<div class="flex items-center gap-2">
+  @for (channel of channels(); track channel.id) {
+    <app-channel-badge [channel]="channel" />
+  }
+</div>

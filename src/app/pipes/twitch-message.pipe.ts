@@ -3,10 +3,10 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { TwitchEmote } from '../../types/twitch';
 
 @Pipe({
-  name: 'emotes',
+  name: 'twitchMessage',
   standalone: true,
 })
-export class EmotesPipe implements PipeTransform {
+export class TwitchMessagePipe implements PipeTransform {
   constructor(private sanitizer: DomSanitizer) {}
 
   transform(value: string, emotes: Map<string, TwitchEmote>): SafeHtml {
@@ -14,6 +14,17 @@ export class EmotesPipe implements PipeTransform {
     if (!message) return '';
 
     message = message.replaceAll('>', '&gt;').replaceAll('<', '&lt;');
+
+    // replace links with <a> tags
+    const matches = message.match(/(https?:\/\/[^\s]+)/g);
+    if (matches) {
+      for (const match of matches) {
+        message = message.replaceAll(
+          match,
+          `<a class="text-blue-500 hover:underline" href="${match}" target="_blank" rel="noopener noreferrer">${match}</a>`,
+        );
+      }
+    }
 
     for (const [identifier, emote] of emotes) {
       message = message.replaceAll(

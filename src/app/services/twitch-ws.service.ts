@@ -4,13 +4,15 @@ import { environment } from '../../environments/environment';
 import { TwitchBadge, TwitchMessage } from '../../types/twitch';
 import { TwitchApiService } from './twitch-api.service';
 import { EmotesService } from './emotes.service';
+import { LoggingService } from './logging.service';
+import { ChannelService } from './channel.service';
 
 type TwitchBadgeSet = Map<string, TwitchBadge>;
 
 @Injectable({
   providedIn: 'root',
 })
-export class TwitchService {
+export class TwitchWsService {
   private channelImages: Map<string, string> = new Map();
   private globalBadges: Map<string, TwitchBadgeSet> = new Map();
   private channelBadges: Map<string, Map<string, TwitchBadgeSet>> = new Map();
@@ -21,12 +23,20 @@ export class TwitchService {
   constructor(
     private readonly twitchApi: TwitchApiService,
     private readonly emoteService: EmotesService,
+    private readonly loggingService: LoggingService,
+    private readonly channelService: ChannelService,
   ) {
+    channelService.channelLeave$.subscribe((channel) => {
+      if (channel.variant !== 'twitch') return;
+
+      this.leaveChannel(channel.name);
+    });
+
     twitchApi.getGlobalBadges().then((badges) => {
       this.globalBadges = badges;
     });
     emoteService.loadGlobalEmotes().then(() => {
-      console.log('loaded global emotes');
+      loggingService.debug('loaded global emotes');
     });
 
     this.ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
@@ -35,12 +45,17 @@ export class TwitchService {
       this.ws.send(`CAP REQ :twitch.tv/tags twitch.tv/commands`);
       this.ws.send(`PASS oauth:${environment.pass}`);
       this.ws.send('NICK johannesibk');
-      this.ws.send('JOIN #derbanko,#johannesibk');
+
+      this.joinChannel('bastighg');
+      this.joinChannel('papaplatte');
     };
 
     this.ws.onmessage = (event) => {
       if (event.data.startsWith('PING')) {
         this.ws.send('PONG :tmi.twitch.tv');
+
+        loggingService.debug('Received ping');
+
         return;
       }
 
@@ -54,9 +69,24 @@ export class TwitchService {
     };
   }
 
-  private parseMassage(message: string) {
-    console.log(message);
+  joinChannel(channel: string) {
+    if (this.ws.CONNECTING) {
+      setTimeout(() => this.joinChannel(channel), 100);
+    } else if (this.ws.OPEN) {
+      this.ws.send(`JOIN #${channel.toLowerCase()}`);
+    }
+  }
 
+  leaveChannel(channel: string) {
+    if (this.ws.CONNECTING) {
+      setTimeout(() => this.leaveChannel(channel), 100);
+    } else if (this.ws.OPEN) {
+      this.ws.send(`PART #${channel.toLowerCase()}`);
+      this.channelService.onChannelLeave(channel);
+    }
+  }
+
+  private parseMassage(message: string) {
     if (message.startsWith('@')) {
       const messageType = message.split(' ')[2];
       const channel = message.split(' ')[3];
@@ -71,21 +101,32 @@ export class TwitchService {
 
       if (messageType === 'JOIN') {
         this.onChannelJoin(channel);
+      } else if (messageType === 'PART') {
+        this.channelService.onChannelLeave(channel);
       }
     }
   }
 
   private onChannelJoin(channel: string) {
     this.twitchApi.getChannelInfo(channel).then((user) => {
+      // Load channel image for prefix
       this.channelImages.set(user.login, user.imageUrl);
+      this.channelService.onChannelJoin({
+        id: user.id.toString(),
+        name: user.displayName,
+        variant: 'twitch',
+        imageUrl: user.imageUrl,
+      });
 
+      // Load channel badges
       this.twitchApi.getChannelBadges(user.id).then((badges) => {
         this.channelBadges.set(channel, badges);
       });
 
+      // Load channel emotes
       this.emoteService
         .loadChannelEmotes(user.id, channel)
-        .then(() => console.log('loaded emotes'));
+        .then(() => this.loggingService.debug(`loaded ${channel} emotes`));
     });
   }
 
@@ -124,6 +165,7 @@ export class TwitchService {
     this.messages$.next({
       id: messageId,
       color,
+      variant: 'twitch',
       displayName: username,
       emotes: this.emoteService.getMessageEmotes(
         userMessage,

@@ -89,8 +89,6 @@ export class EmotesService {
     emoteIds: string[],
     emoteSet: Map<string, TwitchEmote>,
   ) {
-    console.log(emoteIds);
-
     for (const emoteIdentifier of emoteIds) {
       const emoteId = emoteIdentifier.split(':')[0];
 

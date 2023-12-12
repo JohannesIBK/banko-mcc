@@ -1,0 +1,9 @@
+<div class="flex gap-4 my-3">
+  <app-channel-badge-list />
+
+  <form [formGroup]="form" (ngSubmit)="onFormSubmit()">
+    <label>
+      <input required formControlName="channel" />
+    </label>
+  </form>
+</div>

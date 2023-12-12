@@ -1,49 +1,12 @@
+<app-manage-channels />
+
 <div
-  class="flex flex-col max-w-full bg-dark-5 overflow-y-scroll max-h-full"
+  class="bg-dark-5 overflow-y-scroll scroll-smooth max-h-full"
   id="message-container"
 >
   @for (message of messages(); track message.id) {
-    <div class="p-2 bg-dark-8 my-3 text-white relative">
-      <div class="inline-block align-baseline">
-        @if (message.prefixUrl) {
-          <img
-            class="inline pr-1 align-middle relative -top-[1px]"
-            [ngSrc]="message.prefixUrl"
-            alt="streamer"
-            height="36"
-            width="36"
-          />
-        }
-
-        <span class="text-sm text-dark-0 mr-1">{{
-          message.createdAt | date: "hh:mm:ss"
-        }}</span>
-
-        <div class="inline relative top-1">
-          @for (badge of message.badges; track badge.id) {
-            <img
-              class="inline pr-1 align-baseline"
-              [ngSrc]="badge.url.medium"
-              [alt]="badge.title"
-              height="24"
-              width="24"
-            />
-          }
-        </div>
-
-        <span
-          [style]="{ color: message.color }"
-          class="font-semibold align-baseline"
-          >{{ message.displayName }}</span
-        >
-
-        <span>:&nbsp;</span>
-      </div>
-      <span
-        style="margin-top: 1px"
-        [innerHtml]="message.message | emotes: message.emotes"
-        class="break-words"
-      ></span>
-    </div>
+    @if (message.variant === "twitch") {
+      <app-twitch-message [message]="message" />
+    }
   }
 </div>

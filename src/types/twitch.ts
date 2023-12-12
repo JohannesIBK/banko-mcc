@@ -1,4 +1,6 @@
-export interface TwitchMessage {
+import { ChatMessage } from './internal';
+
+export interface TwitchMessage extends ChatMessage {
   id: string;
   color: string;
   displayName: string;
