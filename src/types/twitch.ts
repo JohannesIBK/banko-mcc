@@ -1,13 +1,7 @@
 import { ChatMessage } from './internal';
 
 export interface TwitchMessage extends ChatMessage {
-  id: string;
   color: string;
-  displayName: string;
-  userId: number;
-  roomId: number;
-  createdAt: Date;
-  message: string;
   badges: TwitchBadge[];
   emotes: Map<string, TwitchEmote>;
   prefixUrl: string | null;

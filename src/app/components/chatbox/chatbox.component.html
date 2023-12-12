@@ -5,8 +5,12 @@
   id="message-container"
 >
   @for (message of messages(); track message.id) {
-    @if (message.variant === "twitch") {
+    @if (isTwitchMessage(message)) {
       <app-twitch-message [message]="message" />
+    } @else if (isTwitchMessage(message)) {
+      <span></span>
+    } @else {
+      <app-system-message [message]="message" />
     }
   }
 </div>

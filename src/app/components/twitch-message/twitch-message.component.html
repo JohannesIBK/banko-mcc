@@ -57,5 +57,6 @@
     style="margin-top: 1px"
     [innerHtml]="message.message | twitchMessage: message.emotes"
     class="break-words"
+    [ngClass]="message.deleted ? 'text-dark-0 italic' : ''"
   ></span>
 </div>

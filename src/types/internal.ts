@@ -1,5 +1,12 @@
 export interface ChatMessage {
-  variant: 'youtube' | 'twitch';
+  id: string;
+  origin: 'youtube' | 'twitch' | 'system';
+  deleted?: boolean;
+  displayName: string;
+  createdAt: Date;
+  message: string;
+  userId: string;
+  roomId: string;
 }
 
 export interface Channel {
@@ -7,4 +14,10 @@ export interface Channel {
   id: string;
   name: string;
   imageUrl: string;
+}
+
+export interface MessageDelete {
+  messageId?: string;
+  userId?: string;
+  roomId?: string;
 }

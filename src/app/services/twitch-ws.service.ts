@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { TwitchBadge, TwitchMessage } from '../../types/twitch';
+import { TwitchBadge } from '../../types/twitch';
 import { TwitchApiService } from './twitch-api.service';
 import { EmotesService } from './emotes.service';
 import { LoggingService } from './logging.service';
 import { ChannelService } from './channel.service';
+import { ChatService } from './chat.service';
+import { SYSTEM_MESSAGE } from '../utils/defaults';
 
 type TwitchBadgeSet = Map<string, TwitchBadge>;
 
@@ -17,7 +18,6 @@ export class TwitchWsService {
   private globalBadges: Map<string, TwitchBadgeSet> = new Map();
   private channelBadges: Map<string, Map<string, TwitchBadgeSet>> = new Map();
 
-  private messages$: Subject<TwitchMessage> = new Subject<TwitchMessage>();
   private ws: WebSocket;
 
   constructor(
@@ -25,6 +25,7 @@ export class TwitchWsService {
     private readonly emoteService: EmotesService,
     private readonly loggingService: LoggingService,
     private readonly channelService: ChannelService,
+    private readonly chatService: ChatService,
   ) {
     channelService.channelLeave$.subscribe((channel) => {
       if (channel.variant !== 'twitch') return;
@@ -45,10 +46,9 @@ export class TwitchWsService {
       this.ws.send(`CAP REQ :twitch.tv/tags twitch.tv/commands`);
       this.ws.send(`PASS oauth:${environment.pass}`);
       this.ws.send('NICK johannesibk');
-
-      this.joinChannel('bastighg');
-      this.joinChannel('papaplatte');
     };
+
+    this.joinChannel('johannesibk');
 
     this.ws.onmessage = (event) => {
       if (event.data.startsWith('PING')) {
@@ -70,9 +70,11 @@ export class TwitchWsService {
   }
 
   joinChannel(channel: string) {
-    if (this.ws.CONNECTING) {
+    console.log(this.ws.readyState);
+
+    if (this.ws.readyState === this.ws.CONNECTING) {
       setTimeout(() => this.joinChannel(channel), 100);
-    } else if (this.ws.OPEN) {
+    } else if (this.ws.readyState === this.ws.OPEN) {
       this.ws.send(`JOIN #${channel.toLowerCase()}`);
     }
   }
@@ -87,12 +89,20 @@ export class TwitchWsService {
   }
 
   private parseMassage(message: string) {
+    console.log(message);
+
     if (message.startsWith('@')) {
+      message = message.replace('@', '');
       const messageType = message.split(' ')[2];
-      const channel = message.split(' ')[3];
 
       if (messageType === 'PRIVMSG') {
+        const channel = message.split(' ')[3];
+
         this.parseChatMessage(message, channel);
+      } else if (messageType === 'CLEARMSG') {
+        this.parseDeleteMessage(message);
+      } else if (messageType === 'CLEARCHAT') {
+        this.parseClearChat(message);
       }
     }
     if (message.startsWith(':')) {
@@ -101,8 +111,20 @@ export class TwitchWsService {
 
       if (messageType === 'JOIN') {
         this.onChannelJoin(channel);
+        this.chatService.addMessage({
+          ...SYSTEM_MESSAGE,
+          id: new Date().getTime().toString(),
+          message: `Joined channel ${channel}`,
+          createdAt: new Date(),
+        });
       } else if (messageType === 'PART') {
         this.channelService.onChannelLeave(channel);
+        this.chatService.addMessage({
+          ...SYSTEM_MESSAGE,
+          id: new Date().getTime().toString(),
+          message: `Left Channel ${channel}`,
+          createdAt: new Date(),
+        });
       }
     }
   }
@@ -137,12 +159,12 @@ export class TwitchWsService {
       .find((tag) => tag.startsWith('display-name='))!
       .split('=')[1];
     const color = tags.find((tag) => tag.startsWith('color='))!.split('=')[1];
-    const userId = Number.parseInt(
-      tags.find((tag) => tag.startsWith('user-id='))!.split('=')[1],
-    );
-    const roomId = Number.parseInt(
-      tags.find((tag) => tag.startsWith('room-id='))!.split('=')[1],
-    );
+    const userId = tags
+      .find((tag) => tag.startsWith('user-id='))!
+      .split('=')[1];
+    const roomId = tags
+      .find((tag) => tag.startsWith('room-id='))!
+      .split('=')[1];
     const messageSent = Number.parseInt(
       tags.find((tag) => tag.startsWith('tmi-sent-ts='))!.split('=')[1],
     );
@@ -162,10 +184,10 @@ export class TwitchWsService {
       emotes = [];
     }
 
-    this.messages$.next({
+    this.chatService.addMessage({
       id: messageId,
       color,
-      variant: 'twitch',
+      origin: 'twitch',
       displayName: username,
       emotes: this.emoteService.getMessageEmotes(
         userMessage,
@@ -178,6 +200,66 @@ export class TwitchWsService {
       message: userMessage,
       badges: this.getBadges(badgesId, channel),
       prefixUrl: this.channelImages.get(broadcasterLogin) ?? null,
+    });
+  }
+
+  private parseDeleteMessage(message: string) {
+    const tags = message.split(';');
+    const messageId = tags
+      .find((tag) => tag.startsWith('target-msg-id='))!
+      .split('=')[1];
+
+    const timestamp = Number.parseInt(
+      tags.find((tag) => tag.startsWith('tmi-sent-ts='))!.split('=')[1],
+    );
+
+    const username = tags
+      .find((tag) => tag.startsWith('login='))!
+      .split('=')[1];
+
+    this.chatService.deleteMessage({
+      messageId,
+    });
+
+    this.chatService.addMessage({
+      ...SYSTEM_MESSAGE,
+      id: new Date(timestamp).getTime().toString(),
+      createdAt: new Date(timestamp),
+      message: `A message from ${username} has been deleted`,
+    });
+  }
+
+  private parseClearChat(message: string) {
+    const tags = message.split(';');
+    const roomId = tags
+      .find((tag) => tag.startsWith('room-id='))!
+      .split('=')[1];
+
+    const timestamp = Number.parseInt(
+      tags.find((tag) => tag.startsWith('tmi-sent-ts='))!.split('=')[1],
+    );
+
+    const userId = tags
+      .find((tag) => tag.startsWith('target-user-id='))!
+      .split('=')[1];
+
+    const duration = tags
+      .find((tag) => tag.startsWith('ban-duration='))
+      ?.split('=')
+      .at(1);
+
+    this.chatService.deleteMessage({
+      roomId,
+      userId,
+    });
+
+    this.chatService.addMessage({
+      ...SYSTEM_MESSAGE,
+      id: new Date(timestamp).getTime().toString(),
+      createdAt: new Date(timestamp),
+      message: duration
+        ? `A has been timed out for ${duration} seconds`
+        : `A user has been banned`,
     });
   }
 
@@ -212,9 +294,5 @@ export class TwitchWsService {
     }
 
     return badges;
-  }
-
-  get messages() {
-    return this.messages$.asObservable();
   }
 }
