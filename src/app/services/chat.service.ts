@@ -6,8 +6,8 @@ import { ChatMessage, MessageDelete } from '../../types/internal';
   providedIn: 'root',
 })
 export class ChatService {
-  private messages = new Subject<ChatMessage>();
-  private messageDelete = new Subject<MessageDelete>();
+  private readonly messages = new Subject<ChatMessage>();
+  private readonly messageDelete = new Subject<MessageDelete>();
 
   constructor() {}
 

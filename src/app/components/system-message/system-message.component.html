@@ -1,5 +1,15 @@
 <div class="p-2 bg-dark-8 text-white relative min-h-[30px]">
   <div class="inline-block align-baseline">
+    @if (message.prefixUrl) {
+      <img
+        class="inline-block mr-1 align-middle relative -top-[1px] rounded-full"
+        [ngSrc]="message.prefixUrl"
+        alt="streamer"
+        height="24"
+        width="24"
+      />
+    }
+
     <span class="text-sm text-dark-0">{{
       message.createdAt | date: "hh:mm:ss"
     }}</span>

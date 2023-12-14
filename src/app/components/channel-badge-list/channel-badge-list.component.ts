@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { ChannelService } from '../../services/channel.service';
 import { Channel } from '../../../types/internal';
 import { ChannelBadgeComponent } from '../channel-badge/channel-badge.component';
@@ -8,6 +8,7 @@ import { ChannelBadgeComponent } from '../channel-badge/channel-badge.component'
   standalone: true,
   imports: [ChannelBadgeComponent],
   templateUrl: './channel-badge-list.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChannelBadgeListComponent {
   readonly channels = signal<Channel[]>([]);

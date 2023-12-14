@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Channel } from '../../types/internal';
+import { Channel, ChannelEvent } from '../../types/internal';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 
 @Injectable({
@@ -8,8 +8,14 @@ import { BehaviorSubject, Observable, Subject } from 'rxjs';
 export class ChannelService {
   private channels = new BehaviorSubject<Channel[]>([]);
   private channelLeave = new Subject<Channel>();
-  private channelJoin = new Subject<Channel>();
-  constructor() {}
+  private channelJoin = new Subject<ChannelEvent>();
+
+  constructor() {
+    // Save channels to local storage when they change
+    this.channels$.subscribe(() => {
+      this.saveChannels();
+    });
+  }
 
   onChannelJoin(channel: Channel): void {
     this.channels.next([...this.channels.getValue(), channel]);
@@ -21,15 +27,44 @@ export class ChannelService {
     );
   }
 
+  joinChannel(channel: ChannelEvent): void {
+    this.channelJoin.next(channel);
+  }
+
+  leaveChannel(channel: Channel): void {
+    this.channelLeave.next(channel);
+  }
+
   get channels$(): Observable<Channel[]> {
     return this.channels.asObservable();
   }
 
-  get channelLeave$(): Observable<Channel> {
+  get leaveChannel$(): Observable<Channel> {
     return this.channelLeave.asObservable();
   }
 
-  get channelJoin$(): Observable<Channel> {
+  get joinChannel$(): Observable<ChannelEvent> {
     return this.channelJoin.asObservable();
+  }
+
+  loadFromStorage(): void {
+    const channels: ChannelEvent[] = JSON.parse(
+      localStorage.getItem('channels') ?? '[]',
+    );
+
+    channels.forEach((channel) => {
+      this.joinChannel(channel);
+    });
+  }
+
+  private saveChannels(): void {
+    localStorage.setItem(
+      'channels',
+      JSON.stringify(
+        this.channels
+          .getValue()
+          .map((c) => ({ name: c.name, source: c.source })),
+      ),
+    );
   }
 }

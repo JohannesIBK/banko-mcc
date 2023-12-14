@@ -7,6 +7,7 @@ import { LoggingService } from './logging.service';
 import { ChannelService } from './channel.service';
 import { ChatService } from './chat.service';
 import { SYSTEM_MESSAGE } from '../utils/defaults';
+import { UsersService } from './users.service';
 
 type TwitchBadgeSet = Map<string, TwitchBadge>;
 
@@ -18,7 +19,7 @@ export class TwitchWsService {
   private globalBadges: Map<string, TwitchBadgeSet> = new Map();
   private channelBadges: Map<string, Map<string, TwitchBadgeSet>> = new Map();
 
-  private ws: WebSocket;
+  private ws!: WebSocket;
 
   constructor(
     private readonly twitchApi: TwitchApiService,
@@ -26,9 +27,18 @@ export class TwitchWsService {
     private readonly loggingService: LoggingService,
     private readonly channelService: ChannelService,
     private readonly chatService: ChatService,
+    private readonly usersService: UsersService,
   ) {
-    channelService.channelLeave$.subscribe((channel) => {
-      if (channel.variant !== 'twitch') return;
+    // Listen for join commands
+    channelService.joinChannel$.subscribe((channel) => {
+      if (channel.source !== 'twitch') return;
+
+      this.joinChannel(channel.identifier);
+    });
+
+    // Listen for leave commands
+    channelService.leaveChannel$.subscribe((channel) => {
+      if (channel.name !== 'twitch') return;
 
       this.leaveChannel(channel.name);
     });
@@ -40,6 +50,10 @@ export class TwitchWsService {
       loggingService.debug('loaded global emotes');
     });
 
+    this.setupWebsocket();
+  }
+
+  setupWebsocket() {
     this.ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
 
     this.ws.onopen = async () => {
@@ -48,13 +62,11 @@ export class TwitchWsService {
       this.ws.send('NICK johannesibk');
     };
 
-    this.joinChannel('johannesibk');
-
     this.ws.onmessage = (event) => {
       if (event.data.startsWith('PING')) {
         this.ws.send('PONG :tmi.twitch.tv');
 
-        loggingService.debug('Received ping');
+        this.loggingService.debug('Received ping');
 
         return;
       }
@@ -69,9 +81,7 @@ export class TwitchWsService {
     };
   }
 
-  joinChannel(channel: string) {
-    console.log(this.ws.readyState);
-
+  private joinChannel(channel: string) {
     if (this.ws.readyState === this.ws.CONNECTING) {
       setTimeout(() => this.joinChannel(channel), 100);
     } else if (this.ws.readyState === this.ws.OPEN) {
@@ -79,7 +89,7 @@ export class TwitchWsService {
     }
   }
 
-  leaveChannel(channel: string) {
+  private leaveChannel(channel: string) {
     if (this.ws.CONNECTING) {
       setTimeout(() => this.leaveChannel(channel), 100);
     } else if (this.ws.OPEN) {
@@ -89,8 +99,6 @@ export class TwitchWsService {
   }
 
   private parseMassage(message: string) {
-    console.log(message);
-
     if (message.startsWith('@')) {
       message = message.replace('@', '');
       const messageType = message.split(' ')[2];
@@ -136,7 +144,7 @@ export class TwitchWsService {
       this.channelService.onChannelJoin({
         id: user.id.toString(),
         name: user.displayName,
-        variant: 'twitch',
+        source: 'twitch',
         imageUrl: user.imageUrl,
       });
 
@@ -184,10 +192,12 @@ export class TwitchWsService {
       emotes = [];
     }
 
+    this.usersService.setTwitchUser(userId, { channel, name: username });
+
     this.chatService.addMessage({
       id: messageId,
       color,
-      origin: 'twitch',
+      source: 'twitch',
       displayName: username,
       emotes: this.emoteService.getMessageEmotes(
         userMessage,
@@ -230,6 +240,8 @@ export class TwitchWsService {
   }
 
   private parseClearChat(message: string) {
+    const broadcasterLogin = message.split(' ')[3].replace('#', '');
+
     const tags = message.split(';');
     const roomId = tags
       .find((tag) => tag.startsWith('room-id='))!
@@ -253,13 +265,18 @@ export class TwitchWsService {
       userId,
     });
 
+    const user = this.usersService.getTwitchUser(userId);
+
+    const username = user ? user.name : 'A user';
+
     this.chatService.addMessage({
       ...SYSTEM_MESSAGE,
       id: new Date(timestamp).getTime().toString(),
       createdAt: new Date(timestamp),
+      prefixUrl: this.channelImages.get(broadcasterLogin) ?? null,
       message: duration
-        ? `A has been timed out for ${duration} seconds`
-        : `A user has been banned`,
+        ? `${username} has been timed out for ${duration} seconds`
+        : `${username} has been banned`,
     });
   }
 

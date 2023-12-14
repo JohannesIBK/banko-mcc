@@ -2,7 +2,7 @@ import { Component, Input } from '@angular/core';
 import { Channel } from '../../../types/internal';
 import { NgOptimizedImage } from '@angular/common';
 import { IconsModule } from '../../modules/icons/icons.module';
-import { TwitchWsService } from '../../services/twitch-ws.service';
+import { ChannelService } from '../../services/channel.service';
 
 @Component({
   selector: 'app-channel-badge',
@@ -13,10 +13,10 @@ import { TwitchWsService } from '../../services/twitch-ws.service';
 export class ChannelBadgeComponent {
   @Input({ required: true }) channel!: Channel;
 
-  constructor(private twitchWsService: TwitchWsService) {}
+  constructor(private readonly channelService: ChannelService) {}
 
   getProviderIconUrl(): string {
-    switch (this.channel.variant) {
+    switch (this.channel.source) {
       case 'twitch':
         return '/assets/provider/twitch.svg';
       case 'youtube':
@@ -25,6 +25,6 @@ export class ChannelBadgeComponent {
   }
 
   removeChannel(): void {
-    this.twitchWsService.leaveChannel(this.channel.name);
+    this.channelService.leaveChannel(this.channel);
   }
 }
